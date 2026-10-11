@@ -17,7 +17,7 @@ def create_dataset():
 
     data = pd.DataFrame({
         "attendance": rng.integers(50, 101, number_of_students),
-          "internal_marks": rng.integers(20, 101, number_of_students),
+        "internal_marks": rng.integers(20, 101, number_of_students),
         "assignment_marks": rng.integers(30, 101, number_of_students),
         "previous_score": rng.integers(30, 101, number_of_students)
     })
@@ -85,13 +85,13 @@ def train_model():
     print("\nModel saved as student_result_model.pkl")
 
     metrics = {
-    "accuracy": float(accuracy),
-    "training_records": len(X_train),
-    "testing_records": len(X_test)
-}
+        "accuracy": float(accuracy),
+        "training_records": len(X_train),
+        "testing_records": len(X_test)
+    }
 
-with open("metrics.json", "w") as file:
-    json.dump(metrics, file, indent=4)
+    with open("metrics.json", "w") as file:
+        json.dump(metrics, file, indent=4)
 
     print("Metrics saved as metrics.json")
     return accuracy
