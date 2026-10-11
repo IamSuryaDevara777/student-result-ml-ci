@@ -1,59 +1,68 @@
+import json
+import os
 import unittest
+
+import joblib
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
 
 
 class TestMLPipeline(unittest.TestCase):
 
-    def setUp(self):
-        self.data = pd.DataFrame({
-            "study_hours": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            "attendance": [40, 45, 50, 55, 60, 65, 70, 75, 80, 90],
-            "result": [0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
-        })
+    def test_dataset_created(self):
+        self.assertTrue(os.path.exists("student_results.csv"))
 
-        self.X = self.data[["study_hours", "attendance"]]
-        self.y = self.data["result"]
+    def test_model_created(self):
+        self.assertTrue(os.path.exists("student_result_model.pkl"))
 
-        self.X_train, self.X_test, self.y_train, self.y_test = (
-            train_test_split(
-                self.X,
-                self.y,
-                test_size=0.2,
-                random_state=42,
-                stratify=self.y
-            )
-        )
+    def test_metrics_created(self):
+        self.assertTrue(os.path.exists("metrics.json"))
 
-        self.model = LogisticRegression()
-        self.model.fit(self.X_train, self.y_train)
+    def test_accuracy_is_valid(self):
+        with open("metrics.json", "r") as file:
+            metrics = json.load(file)
 
-        self.predictions = self.model.predict(self.X_test)
-        self.accuracy = accuracy_score(
-            self.y_test, self.predictions
-        )
-
-    def test_model_training(self):
-        self.assertIsNotNone(self.model)
-
-    def test_predictions(self):
-        self.assertEqual(len(self.predictions), len(self.y_test))
-
-    def test_prediction_values(self):
-        self.assertTrue(
-            set(self.predictions).issubset({0, 1})
-        )
-
-    def test_accuracy_range(self):
-        self.assertGreaterEqual(self.accuracy, 0.0)
-        self.assertLessEqual(self.accuracy, 1.0)
-
-    def test_metrics(self):
-        metrics = {"accuracy": self.accuracy}
         accuracy = metrics["accuracy"]
-        self.assertIsInstance(accuracy, float)
+        self.assertGreaterEqual(accuracy, 0.0)
+        self.assertLessEqual(accuracy, 1.0)
+
+    def test_model_prediction(self):
+        model = joblib.load("student_result_model.pkl")
+
+        sample = pd.DataFrame([{
+            "attendance": 85,
+            "internal_marks": 75,
+            "assignment_marks": 80,
+            "previous_score": 78
+        }])
+
+        prediction = model.predict(sample)[0]
+        self.assertIn(int(prediction), [0, 1])
+
+    def test_high_performance_student(self):
+        model = joblib.load("student_result_model.pkl")
+
+        sample = pd.DataFrame([{
+            "attendance": 90,
+            "internal_marks": 85,
+            "assignment_marks": 88,
+            "previous_score": 80
+        }])
+
+        prediction = model.predict(sample)[0]
+        self.assertEqual(int(prediction), 1)
+
+    def test_low_performance_student(self):
+        model = joblib.load("student_result_model.pkl")
+
+        sample = pd.DataFrame([{
+            "attendance": 55,
+            "internal_marks": 30,
+            "assignment_marks": 40,
+            "previous_score": 35
+        }])
+
+        prediction = model.predict(sample)[0]
+        self.assertEqual(int(prediction), 0)
 
 
 if __name__ == "__main__":
