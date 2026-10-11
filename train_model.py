@@ -85,13 +85,13 @@ def train_model():
     print("\nModel saved as student_result_model.pkl")
 
     metrics = {
-          "accuracy": float(accuracy),
-        "training_records": len(X_train),
-        "testing_records": len(X_test)
-    }
+    "accuracy": float(accuracy),
+    "training_records": len(X_train),
+    "testing_records": len(X_test)
+}
 
-    with open("metrics.json", "w") as file:
-        json.dump(metrics, file, indent=4)
+with open("metrics.json", "w") as file:
+    json.dump(metrics, file, indent=4)
 
     print("Metrics saved as metrics.json")
     return accuracy
