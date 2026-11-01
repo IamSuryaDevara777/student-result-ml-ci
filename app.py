@@ -15,7 +15,7 @@ if os.path.exists(MODEL_PATH):
 
 @app.route("/", methods=["GET"])
 def home():
-    return jsonify({"message": "Student Result Prediction API"}), 200
+    return jsonify({"message": "Student Result Prediction API-Updated Version"}), 200
 
 
 @app.route("/health", methods=["GET"])
