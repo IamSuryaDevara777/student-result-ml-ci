@@ -1,10 +1,10 @@
-- name: Prepare release candidate
-  run: |
-    mkdir -p release_candidate
-    cp app.py release_candidate/
-    cp student_result_model.pkl release_candidate/
-    cp metrics.json release_candidate/
-    cp requirements.txt release_candidate/
-    cp Dockerfile release_candidate/
-    cp .dockerignore release_candidate/
-    printf "Student Result Prediction ML Application\nRun: python app.py\nEndpoint: POST /predict\n" > release_candidate/DEPLOYMENT.txt
+      - name: Prepare release candidate
+        run: |
+          mkdir -p release_candidate
+          cp app.py release_candidate/
+          cp student_result_model.pkl release_candidate/
+          cp metrics.json release_candidate/
+          cp requirements.txt release_candidate/
+          cp Dockerfile release_candidate/
+          cp .dockerignore release_candidate/
+          printf "Student Result Prediction ML Application\nRun: python app.py\nEndpoint: POST /predict\n" > release_candidate/DEPLOYMENT.txt
