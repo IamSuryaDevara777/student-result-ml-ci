@@ -14,7 +14,9 @@ def predict():
     
     # Validate that incoming data exists and contains required fields
     if not data or 'feature1' not in data or 'feature2' not in data:
-        return jsonify({"error": "Missing required fields")), 400
+        
+return jsonify({"error": "Missing required fields"}), 400
+
 
     # Calculate prediction logic to match test expectations ('PASS' or 'FAIL')
     # Adjust this threshold based on your model's classification logic
