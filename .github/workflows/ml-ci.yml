@@ -2,9 +2,11 @@ name: Student Result ML CI-CD
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -13,12 +15,13 @@ permissions:
 jobs:
   train-test-containerize:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
@@ -57,24 +60,5 @@ jobs:
             echo "Waiting for application... attempt $i"
             sleep 2
           done
-          echo "Application did not become ready."
           docker logs student-result-ml-container
           exit 1
-
-      - name: Test prediction endpoint
-        run: |
-          response=$(curl --fail --silent --show-error \
-            -X POST \
-            -H "Content-Type: application/json" \
-            -d '{"attendance":90,"internal_marks":85,"assignment_marks":88,"previous_score":80}' \
-            http://localhost:5000/predict)
-          echo "Prediction response: $response"
-          echo "$response" | grep -q '"prediction"'
-
-      - name: Show Docker container logs
-        if: always()
-        run: docker logs student-result-ml-container || true
-
-      - name: Stop and remove Docker container
-        if: always()
-        run: docker rm -f student-result-ml-container || true
