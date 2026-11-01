@@ -2,9 +2,11 @@ name: Student Result ML CI-CD
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -13,6 +15,7 @@ permissions:
 jobs:
   train-test-containerize:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -20,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
@@ -49,14 +52,18 @@ jobs:
 
       - name: Wait for application to become ready
         run: |
-          for i in {1..20}; do
-            if curl --fail --silent --max-time 3 http://localhost:5000/health; then
+          for i in {1..15}; do
+            if curl --fail --silent http://localhost:5000/health; then
               echo "Application is ready."
               exit 0
             fi
             echo "Waiting for application... attempt $i"
-            sleep 3
+            sleep 2
           done
-          echo "=== Container logs ==="
-          docker logs student-result-ml-container || true
+          docker logs student-result-ml-container
           exit 1
+
+      - name: Test prediction endpoint
+        run: |
+          response=$(curl --fail --silent --show-error \
+            -X POST \
