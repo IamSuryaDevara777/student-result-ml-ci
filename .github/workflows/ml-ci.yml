@@ -1,3 +1,45 @@
+name: Student Result ML CI-CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  train-test-containerize:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Train student result model
+        run: python train_model.py
+
+      - name: Check ML quality gate
+        run: python quality_gate.py
+
+      - name: Run automated tests
+        run: python -m unittest discover -v
+
       - name: Build Docker image
         run: docker build -t student-result-ml:${{ github.sha }} .
 
@@ -7,16 +49,6 @@
             --name student-result-ml-container \
             -p 5000:5000 \
             student-result-ml:${{ github.sha }}
-
-      - name: Show container status & logs (debug)
-        run: |
-          sleep 5
-          echo "=== docker ps -a ==="
-          docker ps -a
-          echo "=== docker logs ==="
-          docker logs student-result-ml-container || true
-          echo "=== docker inspect ==="
-          docker inspect student-result-ml-container --format='{{.State.Status}} {{.State.ExitCode}} {{.State.Error}}' || true
 
       - name: Wait for application to become ready
         run: |
@@ -28,6 +60,6 @@
             echo "Waiting for application... attempt $i"
             sleep 3
           done
-          echo "=== FINAL LOGS ==="
+          echo "=== Container logs ==="
           docker logs student-result-ml-container
           exit 1
