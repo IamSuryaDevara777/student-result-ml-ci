@@ -1,3 +1,4 @@
+
 name: Student Result ML CI-CD
 
 on:
@@ -18,10 +19,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -68,6 +69,16 @@ jobs:
           response=$(curl --fail --silent --show-error \
             -X POST \
             -H "Content-Type: application/json" \
-            -d '{"feature1": 1.0, "feature2": 2.0}' \
+            -d '{"attendance":90,"internal_marks":85,"assignment_marks":88,"previous_score":80}' \
             http://localhost:5000/predict)
+
           echo "Prediction response: $response"
+          echo "$response" | grep -q '"prediction"'
+
+      - name: Show Docker container logs
+        if: always()
+        run: docker logs student-result-ml-container || true
+
+      - name: Stop and remove Docker container
+        if: always()
+        run: docker rm -f student-result-ml-container || true
