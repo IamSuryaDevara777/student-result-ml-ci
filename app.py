@@ -20,12 +20,12 @@ def health():
 @app.route("/predict", methods=["POST"])
 def predict():
     if model is None:
-        return jsonify({"error": "Model not found"}), 500
+        return jsonify({"error": "model_not_found"}), 500
 
     data = request.get_json(silent=True)
 
     if not isinstance(data, dict):
-        return jsonify({"error": "Invalid JSON input"}), 400
+        return jsonify({"error": "invalid_json"}), 400
 
     required_fields = [
         "attendance",
@@ -34,8 +34,16 @@ def predict():
         "previous_score"
     ]
 
-    if not all(key in data for key in required_fields):
-        return jsonify({"error": "Missing required fields"}), 400
+    missing_fields = [
+        field for field in required_fields
+        if field not in data
+    ]
+
+    if missing_fields:
+        return jsonify({
+            "error": "missing_fields",
+            "missing_fields": missing_fields
+        }), 400
 
     try:
         features = [[
@@ -45,17 +53,20 @@ def predict():
             float(data["previous_score"])
         ]]
 
-        prediction = int(model.predict(features)[0])
-
-        result = "PASS" if prediction == 1 else "FAIL"
+        prediction_value = int(model.predict(features)[0])
+        prediction = "PASS" if prediction_value == 1 else "FAIL"
 
         return jsonify({
             "prediction": prediction,
-            "result": result
+            "prediction_value": prediction_value,
+            "result": prediction
         }), 200
 
     except (ValueError, TypeError):
-        return jsonify({"error": "Input values must be numeric"}), 400
+        return jsonify({
+            "error": "invalid_input",
+            "message": "Input values must be numeric"
+        }), 400
 
 
 if __name__ == "__main__":
