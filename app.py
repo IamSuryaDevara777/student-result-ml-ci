@@ -18,7 +18,7 @@ def home():
 
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "healthy"}), 200
+    return jsonify({"status": "ok"}), 200
 
 
 @app.route("/predict", methods=["POST"])
