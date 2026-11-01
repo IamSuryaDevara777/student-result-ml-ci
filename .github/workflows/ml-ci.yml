@@ -1,4 +1,4 @@
-```yaml
+
 name: Student Result ML CI-CD
 
 on:
@@ -20,41 +20,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Download the repository code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Set up Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      # Step 3: Upgrade pip
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
 
-      # Step 4: Install project dependencies
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # Step 5: Train the machine learning model
       - name: Train student result model
         run: python train_model.py
 
-      # Step 6: Check the model quality
+      - name: Verify generated ML files
+        run: |
+          test -f student_result_model.pkl
+          test -f metrics.json
+          echo "Model and metrics files found."
+
       - name: Check ML quality gate
         run: python quality_gate.py
 
-      # Step 7: Run machine learning tests
       - name: Run automated ML tests
         run: python -m unittest test_ml_pipeline.py -v
 
-      # Step 8: Test the Flask prediction application
       - name: Run prediction application tests
         run: python -m unittest test_app.py -v
 
-      # Step 9: Prepare the release package
+      - name: Validate release files
+        run: |
+          for file in app.py student_result_model.pkl metrics.json requirements.txt; do
+            if [ ! -f "$file" ]; then
+              echo "ERROR: Missing required file: $file"
+              exit 1
+            fi
+          done
+          echo "All required release files are available."
+
       - name: Prepare release candidate
         run: |
           mkdir -p release_candidate
@@ -63,8 +70,9 @@ jobs:
           cp metrics.json release_candidate/
           cp requirements.txt release_candidate/
           printf 'Student Result Prediction ML Application\nRun: python app.py\nEndpoint: POST /predict\n' > release_candidate/DEPLOYMENT.txt
+          echo "Release package contents:"
+          ls -lh release_candidate/
 
-      # Step 10: Upload the release package
       - name: Upload release candidate
         uses: actions/upload-artifact@v4
         with:
@@ -72,4 +80,3 @@ jobs:
           path: release_candidate/
           if-no-files-found: error
           retention-days: 7
-```
