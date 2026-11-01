@@ -1,4 +1,4 @@
-
+```yaml
 name: Student Result ML CI-CD
 
 on:
@@ -26,7 +26,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Upgrade pip
         run: python -m pip install --upgrade pip
@@ -37,12 +37,6 @@ jobs:
       - name: Train student result model
         run: python train_model.py
 
-      - name: Verify generated ML files
-        run: |
-          test -f student_result_model.pkl
-          test -f metrics.json
-          echo "Model and metrics files found."
-
       - name: Check ML quality gate
         run: python quality_gate.py
 
@@ -52,16 +46,6 @@ jobs:
       - name: Run prediction application tests
         run: python -m unittest test_app.py -v
 
-      - name: Validate release files
-        run: |
-          for file in app.py student_result_model.pkl metrics.json requirements.txt; do
-            if [ ! -f "$file" ]; then
-              echo "ERROR: Missing required file: $file"
-              exit 1
-            fi
-          done
-          echo "All required release files are available."
-
       - name: Prepare release candidate
         run: |
           mkdir -p release_candidate
@@ -69,9 +53,9 @@ jobs:
           cp student_result_model.pkl release_candidate/
           cp metrics.json release_candidate/
           cp requirements.txt release_candidate/
-          printf 'Student Result Prediction ML Application\nRun: python app.py\nEndpoint: POST /predict\n' > release_candidate/DEPLOYMENT.txt
-          echo "Release package contents:"
-          ls -lh release_candidate/
+          cp Dockerfile release_candidate/
+          cp .dockerignore release_candidate/
+          printf "Student Result Prediction ML Application\nRun: python app.py\nEndpoint: POST /predict\n" > release_candidate/DEPLOYMENT.txt
 
       - name: Upload release candidate
         uses: actions/upload-artifact@v4
@@ -80,3 +64,4 @@ jobs:
           path: release_candidate/
           if-no-files-found: error
           retention-days: 7
+```
