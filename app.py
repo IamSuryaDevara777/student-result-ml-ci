@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify
 import joblib
 import os
@@ -10,6 +9,11 @@ model = None
 
 if os.path.exists(MODEL_PATH):
     model = joblib.load(MODEL_PATH)
+
+
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "Student Result Prediction API"}), 200
 
 
 @app.route("/health", methods=["GET"])
