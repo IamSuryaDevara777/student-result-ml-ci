@@ -10,7 +10,7 @@ import uuid
 
 app = Flask(__name__)
 
-# Configure logging
+# Configure application logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -23,21 +23,32 @@ logger = logging.getLogger("student-result-api")
 MODEL_PATH = "student_result_model.pkl"
 model = None
 
-# Load model and log the result
+# Load machine learning model
 if os.path.exists(MODEL_PATH):
     try:
         model = joblib.load(MODEL_PATH)
-        logger.info("event=model_loaded model_file=%s", MODEL_PATH)
+        logger.info(
+            "event=model_loaded model_file=%s",
+            MODEL_PATH
+        )
     except Exception:
         logger.exception("event=model_loading_failed")
 else:
-    logger.error("event=model_file_missing model_file=%s", MODEL_PATH)
+    logger.error(
+        "event=model_file_missing model_file=%s",
+        MODEL_PATH
+    )
 
 
-# Log every incoming request
+# Log incoming requests
 @app.before_request
 def log_request():
-    g.request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+
+    g.request_id = (
+        request.headers.get("X-Request-ID")
+        or str(uuid.uuid4())
+    )
+
     g.start_time = time.perf_counter()
 
     logger.info(
@@ -48,14 +59,20 @@ def log_request():
     )
 
 
-# Log every outgoing response
+# Log outgoing responses
 @app.after_request
 def log_response(response):
+
     duration_ms = round(
-        (time.perf_counter() - g.start_time) * 1000, 2
+        (time.perf_counter() - g.start_time) * 1000,
+        2
     )
 
-    log_function = logger.info if response.status_code < 400 else logger.warning
+    log_function = (
+        logger.info
+        if response.status_code < 400
+        else logger.warning
+    )
 
     log_function(
         "event=response_sent request_id=%s method=%s path=%s status=%s duration_ms=%s",
@@ -67,42 +84,56 @@ def log_response(response):
     )
 
     response.headers["X-Request-ID"] = g.request_id
+
     return response
 
 
+# Home endpoint
 @app.route("/", methods=["GET"])
 def home():
+
     return jsonify({
         "message": "Student Result Prediction API-Updated Version"
     }), 200
 
 
+# Health check endpoint
 @app.route("/health", methods=["GET"])
 def health_check():
+
     return jsonify({
-        "status": "healthy",
+        "status": "ok",
         "service": "student-result-prediction"
     }), 200
 
 
+# Student result prediction endpoint
 @app.route("/predict", methods=["POST"])
 def predict():
 
     if model is None:
+
         logger.error(
             "event=prediction_failed reason=model_not_found request_id=%s",
             g.request_id
         )
-        return jsonify({"error": "model_not_found"}), 500
+
+        return jsonify({
+            "error": "model_not_found"
+        }), 500
 
     data = request.get_json(silent=True)
 
     if not isinstance(data, dict):
+
         logger.warning(
             "event=invalid_json request_id=%s",
             g.request_id
         )
-        return jsonify({"error": "invalid_json"}), 400
+
+        return jsonify({
+            "error": "invalid_json"
+        }), 400
 
     required_fields = [
         "attendance",
@@ -117,17 +148,20 @@ def predict():
     ]
 
     if missing_fields:
+
         logger.warning(
             "event=missing_fields fields=%s request_id=%s",
             missing_fields,
             g.request_id
         )
+
         return jsonify({
             "error": "missing_fields",
             "missing_fields": missing_fields
         }), 400
 
     try:
+
         features = pd.DataFrame([{
             "attendance": float(data["attendance"]),
             "internal_marks": float(data["internal_marks"]),
@@ -141,8 +175,13 @@ def predict():
             g.request_id
         )
 
-        prediction_value = int(model.predict(features)[0])
-        prediction = "PASS" if prediction_value == 1 else "FAIL"
+        prediction_value = int(
+            model.predict(features)[0]
+        )
+
+        prediction = (
+            "PASS" if prediction_value == 1 else "FAIL"
+        )
 
         logger.info(
             "event=prediction_success prediction=%s request_id=%s",
@@ -157,19 +196,32 @@ def predict():
         }), 200
 
     except (ValueError, TypeError):
+
         logger.warning(
             "event=invalid_input request_id=%s",
             g.request_id
         )
-        return jsonify({"error": "invalid_input"}), 400
+
+        return jsonify({
+            "error": "invalid_input"
+        }), 400
 
     except Exception:
+
         logger.exception(
             "event=prediction_error request_id=%s",
             g.request_id
         )
-        return jsonify({"error": "internal_server_error"}), 500
+
+        return jsonify({
+            "error": "internal_server_error"
+        }), 500
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=False
+    )
