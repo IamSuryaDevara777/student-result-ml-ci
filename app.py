@@ -1,5 +1,5 @@
 
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify, g, Response
 import joblib
 import os
 import pandas as pd
@@ -7,6 +7,14 @@ import logging
 import sys
 import time
 import uuid
+
+from prometheus_client import (
+    Counter,
+    Histogram,
+    Gauge,
+    generate_latest,
+    CONTENT_TYPE_LATEST
+)
 
 app = Flask(__name__)
 
@@ -20,6 +28,30 @@ logging.basicConfig(
 
 logger = logging.getLogger("student-result-api")
 
+# Prometheus metrics
+HTTP_REQUESTS = Counter(
+    "student_api_http_requests_total",
+    "Total HTTP requests",
+    ["method", "path", "status"]
+)
+
+HTTP_LATENCY = Histogram(
+    "student_api_http_request_duration_seconds",
+    "HTTP request duration in seconds",
+    ["method", "path"]
+)
+
+PREDICTIONS = Counter(
+    "student_api_predictions_total",
+    "Total prediction attempts",
+    ["result"]
+)
+
+MODEL_LOADED = Gauge(
+    "student_api_model_loaded",
+    "Whether the ML model is loaded"
+)
+
 MODEL_PATH = "student_result_model.pkl"
 model = None
 
@@ -27,13 +59,18 @@ model = None
 if os.path.exists(MODEL_PATH):
     try:
         model = joblib.load(MODEL_PATH)
+        MODEL_LOADED.set(1)
+
         logger.info(
             "event=model_loaded model_file=%s",
             MODEL_PATH
         )
     except Exception:
+        MODEL_LOADED.set(0)
         logger.exception("event=model_loading_failed")
 else:
+    MODEL_LOADED.set(0)
+
     logger.error(
         "event=model_file_missing model_file=%s",
         MODEL_PATH
@@ -59,14 +96,29 @@ def log_request():
     )
 
 
-# Log outgoing responses
+# Log outgoing responses and record Prometheus metrics
 @app.after_request
 def log_response(response):
 
-    duration_ms = round(
-        (time.perf_counter() - g.start_time) * 1000,
-        2
+    duration_seconds = (
+        time.perf_counter() - g.start_time
     )
+
+    duration_ms = round(duration_seconds * 1000, 2)
+
+    # Exclude Prometheus scrape requests from HTTP metrics
+    if request.path != "/metrics":
+
+        HTTP_REQUESTS.labels(
+            method=request.method,
+            path=request.path,
+            status=str(response.status_code)
+        ).inc()
+
+        HTTP_LATENCY.labels(
+            method=request.method,
+            path=request.path
+        ).observe(duration_seconds)
 
     log_function = (
         logger.info
@@ -105,6 +157,16 @@ def health_check():
         "status": "ok",
         "service": "student-result-prediction"
     }), 200
+
+
+# Prometheus metrics endpoint
+@app.route("/metrics", methods=["GET"])
+def metrics():
+
+    return Response(
+        generate_latest(),
+        mimetype=CONTENT_TYPE_LATEST
+    )
 
 
 # Student result prediction endpoint
@@ -160,6 +222,8 @@ def predict():
             "missing_fields": missing_fields
         }), 400
 
+    inference_started = False
+
     try:
 
         features = pd.DataFrame([{
@@ -175,9 +239,13 @@ def predict():
             g.request_id
         )
 
+        inference_started = True
+
         prediction_value = int(
             model.predict(features)[0]
         )
+
+        PREDICTIONS.labels(result="success").inc()
 
         prediction = (
             "PASS" if prediction_value == 1 else "FAIL"
@@ -197,6 +265,9 @@ def predict():
 
     except (ValueError, TypeError):
 
+        if inference_started:
+            PREDICTIONS.labels(result="error").inc()
+
         logger.warning(
             "event=invalid_input request_id=%s",
             g.request_id
@@ -207,6 +278,9 @@ def predict():
         }), 400
 
     except Exception:
+
+        if inference_started:
+            PREDICTIONS.labels(result="error").inc()
 
         logger.exception(
             "event=prediction_error request_id=%s",
